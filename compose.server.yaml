@@ -1,0 +1,97 @@
+name: carsharing
+
+services:
+  rental_db:
+    image: postgres:17
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: rental_db
+      POSTGRES_USER: rental_user
+      POSTGRES_PASSWORD: ${RENTAL_DB_PASSWORD:?Set RENTAL_DB_PASSWORD}
+    volumes:
+      - rental_data:/var/lib/postgresql/data
+    healthcheck:
+      test: [CMD-SHELL, "pg_isready -U rental_user -d rental_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  payment_db:
+    image: postgres:17
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: payment_db
+      POSTGRES_USER: payment_user
+      POSTGRES_PASSWORD: ${PAYMENT_DB_PASSWORD:?Set PAYMENT_DB_PASSWORD}
+    volumes:
+      - payment_data:/var/lib/postgresql/data
+    healthcheck:
+      test: [CMD-SHELL, "pg_isready -U payment_user -d payment_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  rabbitmq:
+    image: rabbitmq:4-management
+    hostname: carsharing-rabbitmq
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: carsharing
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:?Set RABBITMQ_PASSWORD}
+    ports:
+      - "127.0.0.1:15673:15672"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: [CMD, rabbitmq-diagnostics, -q, check_port_connectivity]
+      interval: 10s
+      timeout: 10s
+      retries: 20
+      start_period: 20s
+
+  rental_service:
+    image: ${RENTAL_IMAGE:-carsharing-rental:local}
+    build: ./rental_service
+    restart: unless-stopped
+    ports:
+      - "${APP_BIND_IP:-127.0.0.1}:8001:8000"
+    environment:
+      POSTGRES_URL: postgresql+psycopg://rental_user:${RENTAL_DB_PASSWORD}@rental_db:5432/rental_db
+      AMQP_URL: amqp://carsharing:${RABBITMQ_PASSWORD}@rabbitmq:5672/
+    depends_on:
+      rental_db:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    healthcheck:
+      test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/openapi.json', timeout=5)"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 40s
+
+  payment_service:
+    image: ${PAYMENT_IMAGE:-carsharing-payment:local}
+    build: ./payment_service
+    restart: unless-stopped
+    ports:
+      - "${APP_BIND_IP:-127.0.0.1}:8003:8000"
+    environment:
+      POSTGRES_URL: postgresql+psycopg://payment_user:${PAYMENT_DB_PASSWORD}@payment_db:5432/payment_db
+      AMQP_URL: amqp://carsharing:${RABBITMQ_PASSWORD}@rabbitmq:5672/
+    depends_on:
+      payment_db:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    healthcheck:
+      test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/openapi.json', timeout=5)"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 40s
+
+volumes:
+  rental_data:
+  payment_data:
+  rabbitmq_data:

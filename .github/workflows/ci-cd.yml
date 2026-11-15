@@ -1,0 +1,67 @@
+name: Carsharing CI/CD
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: carsharing-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate Compose
+        run: docker compose config --quiet
+      - name: Build and start the complete system
+        run: docker compose up --build -d --wait --wait-timeout 240
+      - name: Test rental and payment integration
+        run: python3 deploy/smoke_test.py
+      - name: Show logs on failure
+        if: failure()
+        run: docker compose logs --tail 100
+      - name: Clean up test containers and data
+        if: always()
+        run: docker compose down -v
+
+  publish:
+    needs: test
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      DOCKERHUB_USERNAME: khommv
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build both application images
+        run: |
+          docker build -t "$DOCKERHUB_USERNAME/carsharing-rental:$GITHUB_SHA" rental_service
+          docker build -t "$DOCKERHUB_USERNAME/carsharing-payment:$GITHUB_SHA" payment_service
+      - name: Log in to Docker Hub
+        env:
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+        run: |
+          test -n "$DOCKERHUB_TOKEN" || { echo 'Add DOCKERHUB_TOKEN in repository Actions secrets'; exit 1; }
+          printf '%s' "$DOCKERHUB_TOKEN" | docker login --username "$DOCKERHUB_USERNAME" --password-stdin
+      - name: Publish versioned images
+        run: |
+          docker push "$DOCKERHUB_USERNAME/carsharing-rental:$GITHUB_SHA"
+          docker push "$DOCKERHUB_USERNAME/carsharing-payment:$GITHUB_SHA"
+      - name: Publish latest tags for the home server
+        run: |
+          docker tag "$DOCKERHUB_USERNAME/carsharing-rental:$GITHUB_SHA" "$DOCKERHUB_USERNAME/carsharing-rental:latest"
+          docker tag "$DOCKERHUB_USERNAME/carsharing-payment:$GITHUB_SHA" "$DOCKERHUB_USERNAME/carsharing-payment:latest"
+          docker push "$DOCKERHUB_USERNAME/carsharing-rental:latest"
+          docker push "$DOCKERHUB_USERNAME/carsharing-payment:latest"
+      - name: Log out
+        if: always()
+        run: docker logout
