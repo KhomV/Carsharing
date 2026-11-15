@@ -1,0 +1,81 @@
+services:
+  rental_db:
+    image: postgres:17
+    environment:
+      POSTGRES_DB: rental_db
+      POSTGRES_USER: rental_user
+      POSTGRES_PASSWORD: rental_password
+    ports:
+      - "5433:5432"
+    volumes:
+      - rental_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U rental_user -d rental_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  payment_db:
+    image: postgres:17
+    environment:
+      POSTGRES_DB: payment_db
+      POSTGRES_USER: payment_user
+      POSTGRES_PASSWORD: payment_password
+    ports:
+      - "5434:5432"
+    volumes:
+      - payment_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U payment_user -d payment_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  rabbitmq:
+    image: rabbitmq:4-management
+    hostname: carsharing-rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: carsharing
+      RABBITMQ_DEFAULT_PASS: carsharing_password
+    ports:
+      - "5673:5672"
+      - "15673:15672"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "check_running"]
+      interval: 5s
+      timeout: 10s
+      retries: 20
+      start_period: 20s
+
+  rental_service:
+    build: ./rental_service
+    ports:
+      - "8001:8000"
+    environment:
+      POSTGRES_URL: postgresql+psycopg://rental_user:rental_password@rental_db:5432/rental_db
+      AMQP_URL: amqp://carsharing:carsharing_password@rabbitmq:5672/
+    depends_on:
+      rental_db:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+
+  payment_service:
+    build: ./payment_service
+    ports:
+      - "8003:8000"
+    environment:
+      POSTGRES_URL: postgresql+psycopg://payment_user:payment_password@payment_db:5432/payment_db
+      AMQP_URL: amqp://carsharing:carsharing_password@rabbitmq:5672/
+    depends_on:
+      payment_db:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+
+volumes:
+  rental_data:
+  payment_data:
+  rabbitmq_data:
