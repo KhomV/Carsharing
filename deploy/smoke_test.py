@@ -23,12 +23,15 @@ def request(base, path, body=None):
 
 def main():
     for base in (RENTAL_URL, BOOKING_URL, PAYMENT_URL, TELEMETRY_URL):
+        print(f"Waiting for {base} to become ready...")
         for attempt in range(60):
             try:
                 request(base, "/openapi.json")
+                print(f"Service at {base} is ready.")
                 break
-            except (OSError, ValueError):
+            except (OSError, ValueError) as err:
                 if attempt == 59:
+                    print(f"ERROR: Service at {base} failed to respond after 60 attempts: {err}")
                     raise
                 time.sleep(2)
 

@@ -12,15 +12,21 @@ from app.repositories.db_booking_repo import BookingRepo
 from app.repositories.db_car_repo import CarRepo
 
 
+def get_telemetry_client() -> TelemetryClient:
+    return TelemetryClient()
+
+
 class BookingService:
     def __init__(
         self,
         db: Session = Depends(get_db),
-        telemetry_client: TelemetryClient | None = None,
+        telemetry_client: TelemetryClient = Depends(get_telemetry_client),
     ):
         self.car_repo = CarRepo(db)
         self.booking_repo = BookingRepo(db)
-        self.telemetry_client = telemetry_client or TelemetryClient()
+        self.telemetry_client = (
+            TelemetryClient() if telemetry_client is None else telemetry_client
+        )
 
     def create_car(self, request: CreateCarRequest) -> Car:
         car = Car(
