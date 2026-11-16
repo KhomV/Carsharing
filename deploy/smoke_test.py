@@ -1,3 +1,4 @@
+"""Check the full rental -> RabbitMQ -> invoice -> payment flow and booking -> telemetry map integration."""
 import json
 import os
 import time
@@ -5,7 +6,9 @@ import urllib.request
 from uuid import uuid4
 
 RENTAL_URL = os.getenv("RENTAL_URL", "http://127.0.0.1:8001")
+BOOKING_URL = os.getenv("BOOKING_URL", "http://127.0.0.1:8002")
 PAYMENT_URL = os.getenv("PAYMENT_URL", "http://127.0.0.1:8003")
+TELEMETRY_URL = os.getenv("TELEMETRY_URL", "http://127.0.0.1:8004")
 
 
 def request(base, path, body=None):
@@ -19,7 +22,7 @@ def request(base, path, body=None):
 
 
 def main():
-    for base in (RENTAL_URL, PAYMENT_URL):
+    for base in (RENTAL_URL, BOOKING_URL, PAYMENT_URL, TELEMETRY_URL):
         for attempt in range(60):
             try:
                 request(base, "/openapi.json")
@@ -29,8 +32,54 @@ def main():
                     raise
                 time.sleep(2)
 
+    # 1. Telemetry and Booking test:
+    car = request(BOOKING_URL, "/api/cars", {
+        "model": "Exeed LX",
+        "plate_number": f"M{str(uuid4())[:4].upper()}777",
+        "price_per_minute": 1700,
+    })
+    car_id = car["id"]
+    user_id = str(uuid4())
+
+    telemetry = request(TELEMETRY_URL, "/api/telemetry", {
+        "car_id": car_id,
+        "latitude": 55.751244,
+        "longitude": 37.618423,
+        "fuel_level": 94,
+        "mileage": 15200,
+        "is_engine_on": False,
+        "is_handbrake_engaged": True,
+    })
+    assert telemetry["car_id"] == car_id
+    assert telemetry["fuel_level"] == 94
+
+    available_cars = request(BOOKING_URL, "/api/cars/available")
+    matched_car = next((c for c in available_cars if c["id"] == car_id), None)
+    assert matched_car is not None, "Created car should appear in available cars list"
+    assert matched_car["latitude"] == 55.751244, "Car coordinates should be populated synchronously from telemetry"
+    assert matched_car["fuel_level"] == 94, "Car fuel level should match telemetry"
+
+    booking = request(BOOKING_URL, "/api/bookings", {
+        "user_id": user_id,
+        "car_id": car_id,
+        "duration_minutes": 25,
+    })
+    assert booking["status"] == "active"
+    assert booking["car_id"] == car_id
+
+    available_after_booking = request(BOOKING_URL, "/api/cars/available")
+    assert not any(c["id"] == car_id for c in available_after_booking), "Booked car should not be in available list"
+
+    cancelled_booking = request(BOOKING_URL, f"/api/bookings/{booking['id']}/cancel", {})
+    assert cancelled_booking["status"] == "cancelled"
+
+    available_after_cancel = request(BOOKING_URL, "/api/cars/available")
+    assert any(c["id"] == car_id for c in available_after_cancel), "Cancelled car should return to available list"
+    print("PASS: telemetry recording, sync coordinates fetch, car map display, booking, cancel")
+
+    # 2. Rental and Payment flow test:
     rental = request(RENTAL_URL, "/api/rentals", {
-        "user_id": str(uuid4()), "car_id": str(uuid4()),
+        "user_id": user_id, "car_id": car_id,
     })
     path = f"/api/rentals/{rental['id']}"
     assert request(RENTAL_URL, path + "/pause", {})["status"] == "paused"

@@ -24,14 +24,22 @@ jobs:
         run: docker compose -f compose.tests.yaml build
       - name: Unit tests rental without database
         run: docker compose -f compose.tests.yaml run --rm --no-deps rental_tests python -m pytest tests/unit -v
+      - name: Unit tests booking without database
+        run: docker compose -f compose.tests.yaml run --rm --no-deps booking_tests python -m pytest tests/unit -v
       - name: Unit tests payment without database
         run: docker compose -f compose.tests.yaml run --rm --no-deps payment_tests python -m pytest tests/unit -v
+      - name: Unit tests telemetry without database
+        run: docker compose -f compose.tests.yaml run --rm --no-deps telemetry_tests python -m pytest tests/unit -v
       - name: Start isolated PostgreSQL databases
-        run: docker compose -f compose.tests.yaml up -d --wait rental_test_db payment_test_db
+        run: docker compose -f compose.tests.yaml up -d --wait rental_test_db booking_test_db payment_test_db telemetry_test_db
       - name: Integration tests rental PostgreSQL
         run: docker compose -f compose.tests.yaml run --rm --no-deps rental_tests sh -c 'python -m alembic upgrade head && python -m pytest tests/integration -v'
+      - name: Integration tests booking PostgreSQL
+        run: docker compose -f compose.tests.yaml run --rm --no-deps booking_tests sh -c 'python -m alembic upgrade head && python -m pytest tests/integration -v'
       - name: Integration tests payment PostgreSQL
         run: docker compose -f compose.tests.yaml run --rm --no-deps payment_tests sh -c 'python -m alembic upgrade head && python -m pytest tests/integration -v'
+      - name: Integration tests telemetry PostgreSQL
+        run: docker compose -f compose.tests.yaml run --rm --no-deps telemetry_tests sh -c 'python -m alembic upgrade head && python -m pytest tests/integration -v'
       - name: Validate Compose
         run: docker compose config --quiet
       - name: Build and start the complete system
@@ -56,10 +64,12 @@ jobs:
       DOCKERHUB_USERNAME: khommv
     steps:
       - uses: actions/checkout@v4
-      - name: Build both application images
+      - name: Build application images
         run: |
           docker build -t "$DOCKERHUB_USERNAME/carsharing-rental:$GITHUB_SHA" rental_service
+          docker build -t "$DOCKERHUB_USERNAME/carsharing-booking:$GITHUB_SHA" booking_service
           docker build -t "$DOCKERHUB_USERNAME/carsharing-payment:$GITHUB_SHA" payment_service
+          docker build -t "$DOCKERHUB_USERNAME/carsharing-telemetry:$GITHUB_SHA" telemetry_service
       - name: Log in to Docker Hub
         env:
           DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
@@ -69,13 +79,19 @@ jobs:
       - name: Publish versioned images
         run: |
           docker push "$DOCKERHUB_USERNAME/carsharing-rental:$GITHUB_SHA"
+          docker push "$DOCKERHUB_USERNAME/carsharing-booking:$GITHUB_SHA"
           docker push "$DOCKERHUB_USERNAME/carsharing-payment:$GITHUB_SHA"
+          docker push "$DOCKERHUB_USERNAME/carsharing-telemetry:$GITHUB_SHA"
       - name: Publish latest tags for the home server
         run: |
           docker tag "$DOCKERHUB_USERNAME/carsharing-rental:$GITHUB_SHA" "$DOCKERHUB_USERNAME/carsharing-rental:latest"
+          docker tag "$DOCKERHUB_USERNAME/carsharing-booking:$GITHUB_SHA" "$DOCKERHUB_USERNAME/carsharing-booking:latest"
           docker tag "$DOCKERHUB_USERNAME/carsharing-payment:$GITHUB_SHA" "$DOCKERHUB_USERNAME/carsharing-payment:latest"
+          docker tag "$DOCKERHUB_USERNAME/carsharing-telemetry:$GITHUB_SHA" "$DOCKERHUB_USERNAME/carsharing-telemetry:latest"
           docker push "$DOCKERHUB_USERNAME/carsharing-rental:latest"
+          docker push "$DOCKERHUB_USERNAME/carsharing-booking:latest"
           docker push "$DOCKERHUB_USERNAME/carsharing-payment:latest"
+          docker push "$DOCKERHUB_USERNAME/carsharing-telemetry:latest"
       - name: Log out
         if: always()
         run: docker logout

@@ -16,6 +16,21 @@ services:
       timeout: 5s
       retries: 20
 
+  booking_db:
+    image: postgres:17
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: booking_db
+      POSTGRES_USER: booking_user
+      POSTGRES_PASSWORD: ${BOOKING_DB_PASSWORD:?Set BOOKING_DB_PASSWORD}
+    volumes:
+      - booking_data:/var/lib/postgresql/data
+    healthcheck:
+      test: [CMD-SHELL, "pg_isready -U booking_user -d booking_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
   payment_db:
     image: postgres:17
     restart: unless-stopped
@@ -27,6 +42,21 @@ services:
       - payment_data:/var/lib/postgresql/data
     healthcheck:
       test: [CMD-SHELL, "pg_isready -U payment_user -d payment_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  telemetry_db:
+    image: postgres:17
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: telemetry_db
+      POSTGRES_USER: telemetry_user
+      POSTGRES_PASSWORD: ${TELEMETRY_DB_PASSWORD:?Set TELEMETRY_DB_PASSWORD}
+    volumes:
+      - telemetry_data:/var/lib/postgresql/data
+    healthcheck:
+      test: [CMD-SHELL, "pg_isready -U telemetry_user -d telemetry_db"]
       interval: 5s
       timeout: 5s
       retries: 20
@@ -70,6 +100,27 @@ services:
       retries: 10
       start_period: 40s
 
+  booking_service:
+    image: ${BOOKING_IMAGE:-carsharing-booking:local}
+    build: ./booking_service
+    restart: unless-stopped
+    ports:
+      - "${APP_BIND_IP:-127.0.0.1}:8002:8000"
+    environment:
+      POSTGRES_URL: postgresql+psycopg://booking_user:${BOOKING_DB_PASSWORD}@booking_db:5432/booking_db
+      TELEMETRY_SERVICE_URL: http://telemetry_service:8000
+    depends_on:
+      booking_db:
+        condition: service_healthy
+      telemetry_service:
+        condition: service_healthy
+    healthcheck:
+      test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/openapi.json', timeout=5)"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 40s
+
   payment_service:
     image: ${PAYMENT_IMAGE:-carsharing-payment:local}
     build: ./payment_service
@@ -91,7 +142,27 @@ services:
       retries: 10
       start_period: 40s
 
+  telemetry_service:
+    image: ${TELEMETRY_IMAGE:-carsharing-telemetry:local}
+    build: ./telemetry_service
+    restart: unless-stopped
+    ports:
+      - "${APP_BIND_IP:-127.0.0.1}:8004:8000"
+    environment:
+      POSTGRES_URL: postgresql+psycopg://telemetry_user:${TELEMETRY_DB_PASSWORD}@telemetry_db:5432/telemetry_db
+    depends_on:
+      telemetry_db:
+        condition: service_healthy
+    healthcheck:
+      test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/openapi.json', timeout=5)"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 40s
+
 volumes:
   rental_data:
+  booking_data:
   payment_data:
+  telemetry_data:
   rabbitmq_data:

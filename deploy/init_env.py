@@ -7,7 +7,9 @@ path = Path(__file__).resolve().parent.parent / ".env.server"
 content = "\n".join([
     "APP_BIND_IP=192.168.0.36",
     f"RENTAL_DB_PASSWORD={secrets.token_hex(24)}",
+    f"BOOKING_DB_PASSWORD={secrets.token_hex(24)}",
     f"PAYMENT_DB_PASSWORD={secrets.token_hex(24)}",
+    f"TELEMETRY_DB_PASSWORD={secrets.token_hex(24)}",
     f"RABBITMQ_PASSWORD={secrets.token_hex(24)}",
     "",
 ])

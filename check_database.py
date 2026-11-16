@@ -6,9 +6,17 @@ databases = {
         "postgresql+psycopg://"
         "rental_user:rental_password@127.0.0.1:5433/rental_db"
     ),
+    "Бронирование": (
+        "postgresql+psycopg://"
+        "booking_user:booking_password@127.0.0.1:5435/booking_db"
+    ),
     "Оплата": (
         "postgresql+psycopg://"
         "payment_user:payment_password@127.0.0.1:5434/payment_db"
+    ),
+    "Телеметрия": (
+        "postgresql+psycopg://"
+        "telemetry_user:telemetry_password@127.0.0.1:5436/telemetry_db"
     ),
 }
 

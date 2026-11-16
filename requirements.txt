@@ -5,3 +5,4 @@ psycopg[binary]>=3.2,<4
 alembic
 pydantic-settings
 aio-pika>=9,<10
+httpx>=0.27,<1

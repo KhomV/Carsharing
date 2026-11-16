@@ -15,6 +15,20 @@ services:
       timeout: 5s
       retries: 30
 
+  booking_test_db:
+    image: postgres:17
+    environment:
+      POSTGRES_DB: booking_test
+      POSTGRES_USER: test
+      POSTGRES_PASSWORD: test
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: [CMD-SHELL, "pg_isready -U test -d booking_test"]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+
   payment_test_db:
     image: postgres:17
     environment:
@@ -29,6 +43,20 @@ services:
       timeout: 5s
       retries: 30
 
+  telemetry_test_db:
+    image: postgres:17
+    environment:
+      POSTGRES_DB: telemetry_test
+      POSTGRES_USER: test
+      POSTGRES_PASSWORD: test
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: [CMD-SHELL, "pg_isready -U test -d telemetry_test"]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+
   rental_tests:
     build:
       context: ./rental_service
@@ -38,6 +66,15 @@ services:
       AMQP_URL: amqp://test:test@127.0.0.1:1/
       ALLOW_TEST_DATABASE: "1"
 
+  booking_tests:
+    build:
+      context: ./booking_service
+      dockerfile: Dockerfile.tests
+    environment:
+      POSTGRES_URL: postgresql+psycopg://test:test@booking_test_db:5432/booking_test
+      TELEMETRY_SERVICE_URL: http://127.0.0.1:1
+      ALLOW_TEST_DATABASE: "1"
+
   payment_tests:
     build:
       context: ./payment_service
@@ -45,4 +82,12 @@ services:
     environment:
       POSTGRES_URL: postgresql+psycopg://test:test@payment_test_db:5432/payment_test
       AMQP_URL: amqp://test:test@127.0.0.1:1/
+      ALLOW_TEST_DATABASE: "1"
+
+  telemetry_tests:
+    build:
+      context: ./telemetry_service
+      dockerfile: Dockerfile.tests
+    environment:
+      POSTGRES_URL: postgresql+psycopg://test:test@telemetry_test_db:5432/telemetry_test
       ALLOW_TEST_DATABASE: "1"
