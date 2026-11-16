@@ -5,4 +5,3 @@ http://127.0.0.1:15673 -- RabbitMQ
     пароль: carsharing_password
 Запуск: docker compose up --build -d
 Остановка: docker compose stop
-test
