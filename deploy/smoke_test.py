@@ -1,4 +1,3 @@
-"""Check the full rental -> RabbitMQ -> invoice -> payment flow."""
 import json
 import os
 import time
@@ -50,7 +49,6 @@ def main():
     assert invoice["amount"] == finished["total_amount"]
     assert invoice["user_id"] == rental["user_id"]
 
-    # Force a duplicate delivery and wait until the broker has processed it.
     request(RENTAL_URL, path + "/finish", {})
     time.sleep(2)
     matches = [i for i in request(PAYMENT_URL, "/api/invoices")
