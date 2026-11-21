@@ -9,10 +9,16 @@ docker compose -f compose.tests.yaml run --rm --no-deps booking_tests python -m 
 docker compose -f compose.tests.yaml run --rm --no-deps payment_tests python -m pytest tests/unit -v > test-results/unit-payment.log 2>&1
 docker compose -f compose.tests.yaml run --rm --no-deps telemetry_tests python -m pytest tests/unit -v > test-results/unit-telemetry.log 2>&1
 docker compose -f compose.tests.yaml run --rm --no-deps auth_tests python -m pytest tests/unit -v > test-results/unit-auth.log 2>&1
-docker compose -f compose.tests.yaml up -d --wait rental_test_db booking_test_db payment_test_db telemetry_test_db auth_test_db > test-results/databases.log 2>&1
+docker compose -f compose.tests.yaml run --rm --no-deps license_tests python -m pytest tests/unit -v > test-results/unit-license.log 2>&1
+docker compose -f compose.tests.yaml run --rm --no-deps condition_tests python -m pytest tests/unit -v > test-results/unit-condition.log 2>&1
+docker compose -f compose.tests.yaml run --rm --no-deps support_tests python -m pytest tests/unit -v > test-results/unit-support.log 2>&1
+docker compose -f compose.tests.yaml up -d --wait rental_test_db booking_test_db payment_test_db telemetry_test_db auth_test_db license_test_db condition_test_db support_test_db > test-results/databases.log 2>&1
 docker compose -f compose.tests.yaml run --rm --no-deps rental_tests sh -c 'python -m alembic upgrade head && python -m pytest tests/integration -v' > test-results/integration-rental.log 2>&1
 docker compose -f compose.tests.yaml run --rm --no-deps booking_tests sh -c 'python -m alembic upgrade head && python -m pytest tests/integration -v' > test-results/integration-booking.log 2>&1
 docker compose -f compose.tests.yaml run --rm --no-deps payment_tests sh -c 'python -m alembic upgrade head && python -m pytest tests/integration -v' > test-results/integration-payment.log 2>&1
 docker compose -f compose.tests.yaml run --rm --no-deps telemetry_tests sh -c 'python -m alembic upgrade head && python -m pytest tests/integration -v' > test-results/integration-telemetry.log 2>&1
 docker compose -f compose.tests.yaml run --rm --no-deps auth_tests sh -c 'python -m alembic upgrade head && python -m pytest tests/integration -v' > test-results/integration-auth.log 2>&1
-tail -n 2 test-results/unit-rental.log test-results/unit-booking.log test-results/unit-payment.log test-results/unit-telemetry.log test-results/unit-auth.log test-results/integration-rental.log test-results/integration-booking.log test-results/integration-payment.log test-results/integration-telemetry.log test-results/integration-auth.log
+docker compose -f compose.tests.yaml run --rm --no-deps license_tests sh -c 'python -m alembic upgrade head && python -m pytest tests/integration -v' > test-results/integration-license.log 2>&1
+docker compose -f compose.tests.yaml run --rm --no-deps condition_tests sh -c 'python -m alembic upgrade head && python -m pytest tests/integration -v' > test-results/integration-condition.log 2>&1
+docker compose -f compose.tests.yaml run --rm --no-deps support_tests python -m pytest tests/integration -v > test-results/integration-support.log 2>&1
+tail -n 2 test-results/unit-*.log test-results/integration-*.log

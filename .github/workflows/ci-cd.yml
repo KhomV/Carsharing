@@ -32,8 +32,14 @@ jobs:
         run: docker compose -f compose.tests.yaml run --rm --no-deps telemetry_tests python -m pytest tests/unit -v
       - name: Unit tests authentication without database
         run: docker compose -f compose.tests.yaml run --rm --no-deps auth_tests python -m pytest tests/unit -v
-      - name: Start isolated PostgreSQL databases
-        run: docker compose -f compose.tests.yaml up -d --wait rental_test_db booking_test_db payment_test_db telemetry_test_db auth_test_db
+      - name: Unit tests driver license verification without database
+        run: docker compose -f compose.tests.yaml run --rm --no-deps license_tests python -m pytest tests/unit -v
+      - name: Unit tests vehicle condition reporting without database
+        run: docker compose -f compose.tests.yaml run --rm --no-deps condition_tests python -m pytest tests/unit -v
+      - name: Unit tests support without database
+        run: docker compose -f compose.tests.yaml run --rm --no-deps support_tests python -m pytest tests/unit -v
+      - name: Start isolated databases
+        run: docker compose -f compose.tests.yaml up -d --wait rental_test_db booking_test_db payment_test_db telemetry_test_db auth_test_db license_test_db condition_test_db support_test_db
       - name: Integration tests rental PostgreSQL
         run: docker compose -f compose.tests.yaml run --rm --no-deps rental_tests sh -c 'python -m alembic upgrade head && python -m pytest tests/integration -v'
       - name: Integration tests booking PostgreSQL
@@ -44,12 +50,24 @@ jobs:
         run: docker compose -f compose.tests.yaml run --rm --no-deps telemetry_tests sh -c 'python -m alembic upgrade head && python -m pytest tests/integration -v'
       - name: Integration tests authentication PostgreSQL
         run: docker compose -f compose.tests.yaml run --rm --no-deps auth_tests sh -c 'python -m alembic upgrade head && python -m pytest tests/integration -v'
+      - name: Integration tests driver license verification PostgreSQL
+        run: docker compose -f compose.tests.yaml run --rm --no-deps license_tests sh -c 'python -m alembic upgrade head && python -m pytest tests/integration -v'
+      - name: Integration tests vehicle condition reporting PostgreSQL
+        run: docker compose -f compose.tests.yaml run --rm --no-deps condition_tests sh -c 'python -m alembic upgrade head && python -m pytest tests/integration -v'
+      - name: Integration tests support MongoDB
+        run: docker compose -f compose.tests.yaml run --rm --no-deps support_tests python -m pytest tests/integration -v
       - name: Validate Compose
         run: docker compose config --quiet
       - name: Build and start the complete system
         run: docker compose up --build -d --wait --wait-timeout 240
       - name: Test rental and payment integration
         run: python3 deploy/smoke_test.py
+      - name: Test authentication and driver license integration
+        run: python3 deploy/smoke_license.py
+      - name: Test vehicle condition reporting and photo storage
+        run: python3 deploy/smoke_condition.py
+      - name: Test support ticket flow
+        run: python3 deploy/smoke_support.py
       - name: Show logs on failure
         if: failure()
         run: docker compose logs --tail 100

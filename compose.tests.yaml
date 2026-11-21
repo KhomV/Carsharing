@@ -79,6 +79,70 @@ services:
       POSTGRES_URL: postgresql+psycopg://test:test@auth_test_db:5432/auth_test
       ALLOW_TEST_DATABASE: "1"
 
+  license_test_db:
+    image: postgres:17
+    environment:
+      POSTGRES_DB: license_test
+      POSTGRES_USER: test
+      POSTGRES_PASSWORD: test
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: [CMD-SHELL, "pg_isready -U test -d license_test"]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+
+  license_tests:
+    build:
+      context: ./license_service
+      dockerfile: Dockerfile.tests
+    environment:
+      POSTGRES_URL: postgresql+psycopg://test:test@license_test_db:5432/license_test
+      LICENSE_STATUS_KEY: test-license-status-key
+      ALLOW_TEST_DATABASE: "1"
+
+  condition_test_db:
+    image: postgres:17
+    environment:
+      POSTGRES_DB: condition_test
+      POSTGRES_USER: test
+      POSTGRES_PASSWORD: test
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: [CMD-SHELL, "pg_isready -U test -d condition_test"]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+
+  condition_tests:
+    build:
+      context: ./vehicle_condition_service
+      dockerfile: Dockerfile.tests
+    environment:
+      POSTGRES_URL: postgresql+psycopg://test:test@condition_test_db:5432/condition_test
+      ALLOW_TEST_DATABASE: "1"
+
+  support_test_db:
+    image: mongo:8.0
+    tmpfs:
+      - /data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+
+  support_tests:
+    build:
+      context: ./support_service
+      dockerfile: Dockerfile.tests
+    environment:
+      MONGO_URL: mongodb://support_test_db:27017/
+      MONGO_DATABASE: support_test
+      ALLOW_TEST_DATABASE: "1"
+
   rental_tests:
     build:
       context: ./rental_service
