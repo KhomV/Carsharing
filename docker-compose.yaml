@@ -151,9 +151,38 @@ services:
     environment:
       POSTGRES_URL: postgresql+psycopg://auth_user:auth_password@auth_db:5432/auth_db
       LICENSE_SERVICE_URL: ${LICENSE_SERVICE_URL:-http://license_service:8000}
+      LICENSE_STATUS_KEY: ${LICENSE_STATUS_KEY:-carsharing-local-license-key}
     depends_on:
       auth_db:
         condition: service_healthy
+
+  license_db:
+    image: postgres:17
+    environment:
+      POSTGRES_DB: license_db
+      POSTGRES_USER: license_user
+      POSTGRES_PASSWORD: license_password
+    volumes:
+      - license_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U license_user -d license_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  license_service:
+    build: ./license_service
+    ports:
+      - "127.0.0.1:8006:8000"
+    environment:
+      POSTGRES_URL: postgresql+psycopg://license_user:license_password@license_db:5432/license_db
+      AUTH_SERVICE_URL: http://auth_service:8000
+      LICENSE_STATUS_KEY: ${LICENSE_STATUS_KEY:-carsharing-local-license-key}
+    depends_on:
+      license_db:
+        condition: service_healthy
+      auth_service:
+        condition: service_started
 
 volumes:
   rental_data:
@@ -162,3 +191,4 @@ volumes:
   telemetry_data:
   rabbitmq_data:
   auth_data:
+  license_data:

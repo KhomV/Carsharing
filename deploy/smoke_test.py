@@ -11,18 +11,18 @@ PAYMENT_URL = os.getenv("PAYMENT_URL", "http://127.0.0.1:8003")
 TELEMETRY_URL = os.getenv("TELEMETRY_URL", "http://127.0.0.1:8004")
 
 
-def request(base, path, body=None):
+def request(base, path, body=None, *, headers=None):
     data = None if body is None else json.dumps(body).encode()
     req = urllib.request.Request(
         base + path, data=data,
-        headers={"Content-Type": "application/json"},
+        headers={"Content-Type": "application/json", **(headers or {})},
     )
     with urllib.request.urlopen(req, timeout=10) as response:
         return json.load(response)
 
 
-def main():
-    for base in (RENTAL_URL, BOOKING_URL, PAYMENT_URL, TELEMETRY_URL):
+def wait_until_ready(*service_urls):
+    for base in service_urls:
         print(f"Waiting for {base} to become ready...")
         for attempt in range(60):
             try:
@@ -34,6 +34,10 @@ def main():
                     print(f"ERROR: Service at {base} failed to respond after 60 attempts: {err}")
                     raise
                 time.sleep(2)
+
+
+def main():
+    wait_until_ready(RENTAL_URL, BOOKING_URL, PAYMENT_URL, TELEMETRY_URL)
 
     # 1. Telemetry and Booking test:
     car = request(BOOKING_URL, "/api/cars", {
