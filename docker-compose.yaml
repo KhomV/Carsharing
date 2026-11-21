@@ -199,7 +199,8 @@ services:
       retries: 10
 
   condition_storage:
-    image: quay.io/minio/minio:RELEASE.2025-09-06T17-38-46Z
+    build:
+      context: ./deploy/minio
     command: server /data
     environment:
       MINIO_ROOT_USER: ${CONDITION_S3_USER:-carsharing-local}
@@ -207,7 +208,7 @@ services:
     volumes:
       - condition_photos:/data
     healthcheck:
-      test: ["CMD", "mc", "ready", "local"]
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:9000/minio/health/ready"]
       interval: 5s
       timeout: 5s
       retries: 10
