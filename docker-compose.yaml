@@ -234,6 +234,34 @@ services:
       rental_service:
         condition: service_started
 
+  support_db:
+    image: mongo:8.0
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: support_user
+      MONGO_INITDB_ROOT_PASSWORD: support_local_password
+    volumes:
+      - support_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--host", "support_db", "--eval", "db.adminCommand('ping').ok"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  support_service:
+    build: ./support_service
+    ports:
+      - "127.0.0.1:8008:8000"
+    environment:
+      MONGO_URL: mongodb://support_user:support_local_password@support_db:27017/?authSource=admin
+      MONGO_DATABASE: support
+    depends_on:
+      support_db:
+        condition: service_healthy
+      auth_service:
+        condition: service_started
+      rental_service:
+        condition: service_started
+
 volumes:
   rental_data:
   booking_data:
@@ -244,3 +272,4 @@ volumes:
   license_data:
   condition_data:
   condition_photos:
+  support_data:

@@ -124,6 +124,25 @@ services:
       POSTGRES_URL: postgresql+psycopg://test:test@condition_test_db:5432/condition_test
       ALLOW_TEST_DATABASE: "1"
 
+  support_test_db:
+    image: mongo:8.0
+    tmpfs:
+      - /data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+
+  support_tests:
+    build:
+      context: ./support_service
+      dockerfile: Dockerfile.tests
+    environment:
+      MONGO_URL: mongodb://support_test_db:27017/
+      MONGO_DATABASE: support_test
+      ALLOW_TEST_DATABASE: "1"
+
   rental_tests:
     build:
       context: ./rental_service
