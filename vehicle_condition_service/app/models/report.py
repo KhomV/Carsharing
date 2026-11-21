@@ -1,8 +1,8 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import AwareDatetime, BaseModel, ConfigDict, field_validator
 
 
 class ReportPhase(str, Enum):
@@ -23,5 +23,10 @@ class ConditionReport(BaseModel):
     phase: ReportPhase
     reference_id: UUID
     car_id: UUID
-    created_at: datetime
+    created_at: AwareDatetime
     photos: list[Photo]
+
+    @field_validator("created_at")
+    @classmethod
+    def normalize_created_at(cls, value: datetime) -> datetime:
+        return value.astimezone(timezone.utc)

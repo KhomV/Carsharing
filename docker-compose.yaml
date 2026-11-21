@@ -184,6 +184,56 @@ services:
       auth_service:
         condition: service_started
 
+  condition_db:
+    image: postgres:17
+    environment:
+      POSTGRES_DB: condition_db
+      POSTGRES_USER: condition_user
+      POSTGRES_PASSWORD: condition_password
+    volumes:
+      - condition_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U condition_user -d condition_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  condition_storage:
+    image: quay.io/minio/minio:RELEASE.2025-09-06T17-38-46Z
+    command: server /data
+    environment:
+      MINIO_ROOT_USER: ${CONDITION_S3_USER:-carsharing-local}
+      MINIO_ROOT_PASSWORD: ${CONDITION_S3_PASSWORD:-condition-local-password}
+    volumes:
+      - condition_photos:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  vehicle_condition_service:
+    build: ./vehicle_condition_service
+    ports:
+      - "127.0.0.1:8007:8000"
+    environment:
+      POSTGRES_URL: postgresql+psycopg://condition_user:condition_password@condition_db:5432/condition_db
+      S3_ENDPOINT_URL: http://condition_storage:9000
+      S3_CREATE_BUCKET: "true"
+      AWS_ACCESS_KEY_ID: ${CONDITION_S3_USER:-carsharing-local}
+      AWS_SECRET_ACCESS_KEY: ${CONDITION_S3_PASSWORD:-condition-local-password}
+    depends_on:
+      condition_db:
+        condition: service_healthy
+      condition_storage:
+        condition: service_healthy
+      auth_service:
+        condition: service_started
+      booking_service:
+        condition: service_started
+      rental_service:
+        condition: service_started
+
 volumes:
   rental_data:
   booking_data:
@@ -192,3 +242,5 @@ volumes:
   rabbitmq_data:
   auth_data:
   license_data:
+  condition_data:
+  condition_photos:
