@@ -198,7 +198,7 @@ services:
       timeout: 5s
       retries: 10
 
-  condition_storage:
+  condition-storage:
     build:
       context: ./deploy/minio
     command: server /data
@@ -219,14 +219,14 @@ services:
       - "127.0.0.1:8007:8000"
     environment:
       POSTGRES_URL: postgresql+psycopg://condition_user:condition_password@condition_db:5432/condition_db
-      S3_ENDPOINT_URL: http://condition_storage:9000
+      S3_ENDPOINT_URL: http://condition-storage:9000
       S3_CREATE_BUCKET: "true"
       AWS_ACCESS_KEY_ID: ${CONDITION_S3_USER:-carsharing-local}
       AWS_SECRET_ACCESS_KEY: ${CONDITION_S3_PASSWORD:-condition-local-password}
     depends_on:
       condition_db:
         condition: service_healthy
-      condition_storage:
+      condition-storage:
         condition: service_healthy
       auth_service:
         condition: service_started
