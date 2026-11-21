@@ -4,10 +4,12 @@ from uuid import uuid4
 import httpx
 import pytest
 from fastapi.testclient import TestClient
+from pydantic import SecretStr
 
 from app.main import app
 from app.services.auth_service import AuthService
 from app.services.security import hash_password, verify_password
+from app.settings import settings
 
 
 def test_password_hash_uses_random_salt():
@@ -59,8 +61,11 @@ def test_eligibility_uses_license_service(api, monkeypatch, status_code, status,
     account_id = uuid4()
     service.authenticate.return_value.id = account_id
 
-    def get(url, *, timeout):
+    monkeypatch.setattr(settings, "license_status_key", SecretStr("test-service-key"))
+
+    def get(url, *, headers, timeout):
         assert url.endswith(f"/api/users/{account_id}/license-status")
+        assert headers["X-License-Status-Key"] == "test-service-key"
         assert timeout > 0
         return httpx.Response(status_code, json={"status": status}, request=httpx.Request("GET", url))
 
