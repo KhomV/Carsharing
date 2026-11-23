@@ -15,11 +15,15 @@ os.chmod(backup / '.env.server', 0o600)
 text = path.read_text(encoding='utf-8')
 keys = {line.partition('=')[0] for line in text.splitlines() if '=' in line and not line.startswith('#')}
 additions = []
-for key in ('BOOKING_DB_PASSWORD', 'TELEMETRY_DB_PASSWORD'):
+for key in ('BOOKING_DB_PASSWORD', 'TELEMETRY_DB_PASSWORD', 'AUTH_DB_PASSWORD', 'LICENSE_DB_PASSWORD', 'CONDITION_DB_PASSWORD', 'SUPPORT_DB_PASSWORD', 'LICENSE_STATUS_KEY', 'CONDITION_S3_PASSWORD'):
     if key not in keys:
         additions.append(f'{key}={secrets.token_hex(24)}')
+if 'CONDITION_S3_USER' not in keys:
+    additions.append('CONDITION_S3_USER=carsharing-storage')
 for key, image in [('RENTAL_IMAGE','carsharing-rental'),('PAYMENT_IMAGE','carsharing-payment'),
-                   ('BOOKING_IMAGE','carsharing-booking'),('TELEMETRY_IMAGE','carsharing-telemetry')]:
+                   ('BOOKING_IMAGE','carsharing-booking'),('TELEMETRY_IMAGE','carsharing-telemetry'), ('AUTH_IMAGE','carsharing-auth'),
+                   ('LICENSE_IMAGE','carsharing-license'), ('CONDITION_IMAGE','carsharing-condition'),
+                   ('SUPPORT_IMAGE','carsharing-support'), ('MINIO_IMAGE','carsharing-minio')]:
     if key not in keys:
         additions.append(f'{key}=khommv/{image}:latest')
 if additions:

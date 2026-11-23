@@ -92,6 +92,11 @@ jobs:
           docker build -t "$DOCKERHUB_USERNAME/carsharing-booking:$GITHUB_SHA" booking_service
           docker build -t "$DOCKERHUB_USERNAME/carsharing-payment:$GITHUB_SHA" payment_service
           docker build -t "$DOCKERHUB_USERNAME/carsharing-telemetry:$GITHUB_SHA" telemetry_service
+          docker build -t "$DOCKERHUB_USERNAME/carsharing-auth:$GITHUB_SHA" auth_service
+          docker build -t "$DOCKERHUB_USERNAME/carsharing-license:$GITHUB_SHA" license_service
+          docker build -t "$DOCKERHUB_USERNAME/carsharing-condition:$GITHUB_SHA" vehicle_condition_service
+          docker build -t "$DOCKERHUB_USERNAME/carsharing-support:$GITHUB_SHA" support_service
+          docker build -t "$DOCKERHUB_USERNAME/carsharing-minio:$GITHUB_SHA" deploy/minio
       - name: Log in to Docker Hub
         env:
           DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
@@ -104,16 +109,31 @@ jobs:
           docker push "$DOCKERHUB_USERNAME/carsharing-booking:$GITHUB_SHA"
           docker push "$DOCKERHUB_USERNAME/carsharing-payment:$GITHUB_SHA"
           docker push "$DOCKERHUB_USERNAME/carsharing-telemetry:$GITHUB_SHA"
+          docker push "$DOCKERHUB_USERNAME/carsharing-auth:$GITHUB_SHA"
+          docker push "$DOCKERHUB_USERNAME/carsharing-license:$GITHUB_SHA"
+          docker push "$DOCKERHUB_USERNAME/carsharing-condition:$GITHUB_SHA"
+          docker push "$DOCKERHUB_USERNAME/carsharing-support:$GITHUB_SHA"
+          docker push "$DOCKERHUB_USERNAME/carsharing-minio:$GITHUB_SHA"
       - name: Publish latest tags for the home server
         run: |
           docker tag "$DOCKERHUB_USERNAME/carsharing-rental:$GITHUB_SHA" "$DOCKERHUB_USERNAME/carsharing-rental:latest"
           docker tag "$DOCKERHUB_USERNAME/carsharing-booking:$GITHUB_SHA" "$DOCKERHUB_USERNAME/carsharing-booking:latest"
           docker tag "$DOCKERHUB_USERNAME/carsharing-payment:$GITHUB_SHA" "$DOCKERHUB_USERNAME/carsharing-payment:latest"
           docker tag "$DOCKERHUB_USERNAME/carsharing-telemetry:$GITHUB_SHA" "$DOCKERHUB_USERNAME/carsharing-telemetry:latest"
+          docker tag "$DOCKERHUB_USERNAME/carsharing-auth:$GITHUB_SHA" "$DOCKERHUB_USERNAME/carsharing-auth:latest"
+          docker tag "$DOCKERHUB_USERNAME/carsharing-license:$GITHUB_SHA" "$DOCKERHUB_USERNAME/carsharing-license:latest"
+          docker tag "$DOCKERHUB_USERNAME/carsharing-condition:$GITHUB_SHA" "$DOCKERHUB_USERNAME/carsharing-condition:latest"
+          docker tag "$DOCKERHUB_USERNAME/carsharing-support:$GITHUB_SHA" "$DOCKERHUB_USERNAME/carsharing-support:latest"
+          docker tag "$DOCKERHUB_USERNAME/carsharing-minio:$GITHUB_SHA" "$DOCKERHUB_USERNAME/carsharing-minio:latest"
           docker push "$DOCKERHUB_USERNAME/carsharing-rental:latest"
           docker push "$DOCKERHUB_USERNAME/carsharing-booking:latest"
           docker push "$DOCKERHUB_USERNAME/carsharing-payment:latest"
           docker push "$DOCKERHUB_USERNAME/carsharing-telemetry:latest"
+          docker push "$DOCKERHUB_USERNAME/carsharing-auth:latest"
+          docker push "$DOCKERHUB_USERNAME/carsharing-license:latest"
+          docker push "$DOCKERHUB_USERNAME/carsharing-condition:latest"
+          docker push "$DOCKERHUB_USERNAME/carsharing-support:latest"
+          docker push "$DOCKERHUB_USERNAME/carsharing-minio:latest"
       - name: Log out
         if: always()
         run: docker logout

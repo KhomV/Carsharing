@@ -11,6 +11,13 @@ content = "\n".join([
     f"PAYMENT_DB_PASSWORD={secrets.token_hex(24)}",
     f"TELEMETRY_DB_PASSWORD={secrets.token_hex(24)}",
     f"RABBITMQ_PASSWORD={secrets.token_hex(24)}",
+    f"AUTH_DB_PASSWORD={secrets.token_hex(24)}",
+    f"LICENSE_DB_PASSWORD={secrets.token_hex(24)}",
+    f"CONDITION_DB_PASSWORD={secrets.token_hex(24)}",
+    f"SUPPORT_DB_PASSWORD={secrets.token_hex(24)}",
+    f"LICENSE_STATUS_KEY={secrets.token_hex(24)}",
+    "CONDITION_S3_USER=carsharing-storage",
+    f"CONDITION_S3_PASSWORD={secrets.token_hex(24)}",
     "",
 ])
 fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)

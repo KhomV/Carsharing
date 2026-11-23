@@ -1,5 +1,4 @@
 name: carsharing
-
 services:
   rental_db:
     image: postgres:17
@@ -9,13 +8,14 @@ services:
       POSTGRES_USER: rental_user
       POSTGRES_PASSWORD: ${RENTAL_DB_PASSWORD:?Set RENTAL_DB_PASSWORD}
     volumes:
-      - rental_data:/var/lib/postgresql/data
+    - rental_data:/var/lib/postgresql/data
     healthcheck:
-      test: [CMD-SHELL, "pg_isready -U rental_user -d rental_db"]
+      test:
+      - CMD-SHELL
+      - pg_isready -U rental_user -d rental_db
       interval: 5s
       timeout: 5s
       retries: 20
-
   booking_db:
     image: postgres:17
     restart: unless-stopped
@@ -24,13 +24,14 @@ services:
       POSTGRES_USER: booking_user
       POSTGRES_PASSWORD: ${BOOKING_DB_PASSWORD:?Set BOOKING_DB_PASSWORD}
     volumes:
-      - booking_data:/var/lib/postgresql/data
+    - booking_data:/var/lib/postgresql/data
     healthcheck:
-      test: [CMD-SHELL, "pg_isready -U booking_user -d booking_db"]
+      test:
+      - CMD-SHELL
+      - pg_isready -U booking_user -d booking_db
       interval: 5s
       timeout: 5s
       retries: 20
-
   payment_db:
     image: postgres:17
     restart: unless-stopped
@@ -39,13 +40,14 @@ services:
       POSTGRES_USER: payment_user
       POSTGRES_PASSWORD: ${PAYMENT_DB_PASSWORD:?Set PAYMENT_DB_PASSWORD}
     volumes:
-      - payment_data:/var/lib/postgresql/data
+    - payment_data:/var/lib/postgresql/data
     healthcheck:
-      test: [CMD-SHELL, "pg_isready -U payment_user -d payment_db"]
+      test:
+      - CMD-SHELL
+      - pg_isready -U payment_user -d payment_db
       interval: 5s
       timeout: 5s
       retries: 20
-
   telemetry_db:
     image: postgres:17
     restart: unless-stopped
@@ -54,13 +56,14 @@ services:
       POSTGRES_USER: telemetry_user
       POSTGRES_PASSWORD: ${TELEMETRY_DB_PASSWORD:?Set TELEMETRY_DB_PASSWORD}
     volumes:
-      - telemetry_data:/var/lib/postgresql/data
+    - telemetry_data:/var/lib/postgresql/data
     healthcheck:
-      test: [CMD-SHELL, "pg_isready -U telemetry_user -d telemetry_db"]
+      test:
+      - CMD-SHELL
+      - pg_isready -U telemetry_user -d telemetry_db
       interval: 5s
       timeout: 5s
       retries: 20
-
   rabbitmq:
     image: rabbitmq:4-management
     hostname: carsharing-rabbitmq
@@ -69,22 +72,25 @@ services:
       RABBITMQ_DEFAULT_USER: carsharing
       RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:?Set RABBITMQ_PASSWORD}
     ports:
-      - "127.0.0.1:15673:15672"
+    - 127.0.0.1:15673:15672
     volumes:
-      - rabbitmq_data:/var/lib/rabbitmq
+    - rabbitmq_data:/var/lib/rabbitmq
     healthcheck:
-      test: [CMD, rabbitmq-diagnostics, -q, check_port_connectivity]
+      test:
+      - CMD
+      - rabbitmq-diagnostics
+      - -q
+      - check_port_connectivity
       interval: 10s
       timeout: 10s
       retries: 20
       start_period: 20s
-
   rental_service:
     image: ${RENTAL_IMAGE:-carsharing-rental:local}
     build: ./rental_service
     restart: unless-stopped
     ports:
-      - "${APP_BIND_IP:-127.0.0.1}:8001:8000"
+    - ${APP_BIND_IP:-127.0.0.1}:8001:8000
     environment:
       POSTGRES_URL: postgresql+psycopg://rental_user:${RENTAL_DB_PASSWORD}@rental_db:5432/rental_db
       AMQP_URL: amqp://carsharing:${RABBITMQ_PASSWORD}@rabbitmq:5672/
@@ -94,18 +100,21 @@ services:
       rabbitmq:
         condition: service_healthy
     healthcheck:
-      test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/openapi.json', timeout=5)"]
+      test:
+      - CMD
+      - python
+      - -c
+      - import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/openapi.json', timeout=5)
       interval: 15s
       timeout: 10s
       retries: 10
       start_period: 40s
-
   booking_service:
     image: ${BOOKING_IMAGE:-carsharing-booking:local}
     build: ./booking_service
     restart: unless-stopped
     ports:
-      - "${APP_BIND_IP:-127.0.0.1}:8002:8000"
+    - ${APP_BIND_IP:-127.0.0.1}:8002:8000
     environment:
       POSTGRES_URL: postgresql+psycopg://booking_user:${BOOKING_DB_PASSWORD}@booking_db:5432/booking_db
       TELEMETRY_SERVICE_URL: http://telemetry_service:8000
@@ -115,18 +124,21 @@ services:
       telemetry_service:
         condition: service_healthy
     healthcheck:
-      test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/openapi.json', timeout=5)"]
+      test:
+      - CMD
+      - python
+      - -c
+      - import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/openapi.json', timeout=5)
       interval: 15s
       timeout: 10s
       retries: 10
       start_period: 40s
-
   payment_service:
     image: ${PAYMENT_IMAGE:-carsharing-payment:local}
     build: ./payment_service
     restart: unless-stopped
     ports:
-      - "${APP_BIND_IP:-127.0.0.1}:8003:8000"
+    - ${APP_BIND_IP:-127.0.0.1}:8003:8000
     environment:
       POSTGRES_URL: postgresql+psycopg://payment_user:${PAYMENT_DB_PASSWORD}@payment_db:5432/payment_db
       AMQP_URL: amqp://carsharing:${RABBITMQ_PASSWORD}@rabbitmq:5672/
@@ -136,33 +148,245 @@ services:
       rabbitmq:
         condition: service_healthy
     healthcheck:
-      test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/openapi.json', timeout=5)"]
+      test:
+      - CMD
+      - python
+      - -c
+      - import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/openapi.json', timeout=5)
       interval: 15s
       timeout: 10s
       retries: 10
       start_period: 40s
-
   telemetry_service:
     image: ${TELEMETRY_IMAGE:-carsharing-telemetry:local}
     build: ./telemetry_service
     restart: unless-stopped
     ports:
-      - "${APP_BIND_IP:-127.0.0.1}:8004:8000"
+    - ${APP_BIND_IP:-127.0.0.1}:8004:8000
     environment:
       POSTGRES_URL: postgresql+psycopg://telemetry_user:${TELEMETRY_DB_PASSWORD}@telemetry_db:5432/telemetry_db
     depends_on:
       telemetry_db:
         condition: service_healthy
     healthcheck:
-      test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/openapi.json', timeout=5)"]
+      test:
+      - CMD
+      - python
+      - -c
+      - import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/openapi.json', timeout=5)
       interval: 15s
       timeout: 10s
       retries: 10
       start_period: 40s
-
+  auth_db:
+    image: postgres:17
+    environment:
+      POSTGRES_DB: auth_db
+      POSTGRES_USER: auth_user
+      POSTGRES_PASSWORD: ${AUTH_DB_PASSWORD:?Set AUTH_DB_PASSWORD}
+    volumes:
+    - auth_data:/var/lib/postgresql/data
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - pg_isready -U auth_user -d auth_db
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+  license_db:
+    image: postgres:17
+    environment:
+      POSTGRES_DB: license_db
+      POSTGRES_USER: license_user
+      POSTGRES_PASSWORD: ${LICENSE_DB_PASSWORD:?Set LICENSE_DB_PASSWORD}
+    volumes:
+    - license_data:/var/lib/postgresql/data
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - pg_isready -U license_user -d license_db
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+  condition_db:
+    image: postgres:17
+    environment:
+      POSTGRES_DB: condition_db
+      POSTGRES_USER: condition_user
+      POSTGRES_PASSWORD: ${CONDITION_DB_PASSWORD:?Set CONDITION_DB_PASSWORD}
+    volumes:
+    - condition_data:/var/lib/postgresql/data
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - pg_isready -U condition_user -d condition_db
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+  support_db:
+    image: mongo:8.0
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: support_user
+      MONGO_INITDB_ROOT_PASSWORD: ${SUPPORT_DB_PASSWORD:?Set SUPPORT_DB_PASSWORD}
+    volumes:
+    - support_data:/data/db
+    healthcheck:
+      test:
+      - CMD
+      - mongosh
+      - --quiet
+      - --host
+      - support_db
+      - --eval
+      - db.adminCommand('ping').ok
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+    command:
+    - mongod
+    - --wiredTigerCacheSizeGB
+    - '0.25'
+  condition-storage:
+    build:
+      context: ./deploy/minio
+    command: server /data
+    environment:
+      MINIO_ROOT_USER: ${CONDITION_S3_USER:?Set CONDITION_S3_USER}
+      MINIO_ROOT_PASSWORD: ${CONDITION_S3_PASSWORD:?Set CONDITION_S3_PASSWORD}
+    volumes:
+    - condition_photos:/data
+    healthcheck:
+      test:
+      - CMD
+      - wget
+      - -q
+      - -O
+      - /dev/null
+      - http://127.0.0.1:9000/minio/health/ready
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    image: ${MINIO_IMAGE:-khommv/carsharing-minio:latest}
+    restart: unless-stopped
+  auth_service:
+    build: ./auth_service
+    ports:
+    - ${APP_BIND_IP:-127.0.0.1}:8005:8000
+    environment:
+      POSTGRES_URL: postgresql+psycopg://auth_user:${AUTH_DB_PASSWORD}@auth_db:5432/auth_db
+      LICENSE_SERVICE_URL: ${LICENSE_SERVICE_URL:-http://license_service:8000}
+      LICENSE_STATUS_KEY: ${LICENSE_STATUS_KEY:?Set LICENSE_STATUS_KEY}
+    depends_on:
+      auth_db:
+        condition: service_healthy
+    image: ${AUTH_IMAGE:-khommv/carsharing-auth:latest}
+    restart: unless-stopped
+    healthcheck:
+      test:
+      - CMD
+      - python
+      - -c
+      - import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/openapi.json', timeout=5)
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 40s
+  license_service:
+    build: ./license_service
+    ports:
+    - ${APP_BIND_IP:-127.0.0.1}:8006:8000
+    environment:
+      POSTGRES_URL: postgresql+psycopg://license_user:${LICENSE_DB_PASSWORD}@license_db:5432/license_db
+      AUTH_SERVICE_URL: http://auth_service:8000
+      LICENSE_STATUS_KEY: ${LICENSE_STATUS_KEY:?Set LICENSE_STATUS_KEY}
+    depends_on:
+      license_db:
+        condition: service_healthy
+      auth_service:
+        condition: service_healthy
+    image: ${LICENSE_IMAGE:-khommv/carsharing-license:latest}
+    restart: unless-stopped
+    healthcheck:
+      test:
+      - CMD
+      - python
+      - -c
+      - import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/openapi.json', timeout=5)
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 40s
+  vehicle_condition_service:
+    build: ./vehicle_condition_service
+    ports:
+    - ${APP_BIND_IP:-127.0.0.1}:8007:8000
+    environment:
+      POSTGRES_URL: postgresql+psycopg://condition_user:${CONDITION_DB_PASSWORD}@condition_db:5432/condition_db
+      S3_ENDPOINT_URL: http://condition-storage:9000
+      S3_CREATE_BUCKET: 'true'
+      AWS_ACCESS_KEY_ID: ${CONDITION_S3_USER}
+      AWS_SECRET_ACCESS_KEY: ${CONDITION_S3_PASSWORD}
+    depends_on:
+      condition_db:
+        condition: service_healthy
+      condition-storage:
+        condition: service_healthy
+      auth_service:
+        condition: service_healthy
+      booking_service:
+        condition: service_healthy
+      rental_service:
+        condition: service_healthy
+    image: ${CONDITION_IMAGE:-khommv/carsharing-condition:latest}
+    restart: unless-stopped
+    healthcheck:
+      test:
+      - CMD
+      - python
+      - -c
+      - import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/openapi.json', timeout=5)
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 40s
+  support_service:
+    build: ./support_service
+    ports:
+    - ${APP_BIND_IP:-127.0.0.1}:8008:8000
+    environment:
+      MONGO_URL: mongodb://support_user:${SUPPORT_DB_PASSWORD}@support_db:27017/?authSource=admin
+      MONGO_DATABASE: support
+    depends_on:
+      support_db:
+        condition: service_healthy
+      auth_service:
+        condition: service_healthy
+      rental_service:
+        condition: service_healthy
+    image: ${SUPPORT_IMAGE:-khommv/carsharing-support:latest}
+    restart: unless-stopped
+    healthcheck:
+      test:
+      - CMD
+      - python
+      - -c
+      - import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/openapi.json', timeout=5)
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 40s
 volumes:
-  rental_data:
-  booking_data:
-  payment_data:
-  telemetry_data:
-  rabbitmq_data:
+  rental_data: null
+  booking_data: null
+  payment_data: null
+  telemetry_data: null
+  rabbitmq_data: null
+  auth_data: null
+  license_data: null
+  condition_data: null
+  condition_photos: null
+  support_data: null
